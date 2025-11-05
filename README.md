@@ -32,8 +32,8 @@ The Smart Study Resource Recommender is an AI-powered platform designed to help 
 - Collaborative study playlists
 
 ## Project Management
-- **GitHub Repository:** [Link to this repo]
-- **ClickUp Board:** [Add ClickUp link here]
+- **GitHub Repository:** https://github.com/TSanf0rd/smart-study-recommender
+- **ClickUp Board:** https://sharing.clickup.com/9017307085/b/h/6-901706993184-2/21aa6efc86b4002
 
 ## Sprint 1 Status
 Current focus: Project setup and initial implementation of core infrastructure.
