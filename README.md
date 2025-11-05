@@ -37,3 +37,29 @@ The Smart Study Resource Recommender is an AI-powered platform designed to help 
 
 ## Sprint 1 Status
 Current focus: Project setup and initial implementation of core infrastructure.
+
+# Team Roles - Sprint 1
+
+## Tyler Sanford
+- **Role:** Documentation Lead & Backend Developer
+- **Responsibilities:**
+  - Maintain project documentation
+  - Implement API endpoints
+  - Database schema design
+  - Sprint report writing
+
+## Josh England
+- **Role:** Team Lead & Full-Stack Developer
+- **Responsibilities:**
+  - Project coordination
+  - Backend development (FastAPI)
+  - Frontend-backend integration
+  - Code review
+
+## Kendric Jones
+- **Role:** Frontend Developer & Testing Lead
+- **Responsibilities:**
+  - React UI implementation
+  - User interface design
+  - Component testing
+  - User experience validation
