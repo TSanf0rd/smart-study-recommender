@@ -1,0 +1,10 @@
+Step 1:
+Navigate to the backend folder then run this command:
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+This opens up the backend to be used by the uvicorn
+
+Step 2:
+Navigate back to smart-study-ui and run the following command:
+npm start
+

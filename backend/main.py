@@ -51,14 +51,14 @@ class UserRegister(BaseModel):
             "example": {
                 "username": "john_doe",
                 "email": "john@example.com",
-                "passoword": "securepassword123",
+                "password": "securepassword123",
                 "role": "student"
             }
         }
 
 class UserLogin(BaseModel):
     email: EmailStr
-    passoword: str
+    password: str
 
     class Conflig:
         json_schema_extra = {
@@ -121,7 +121,7 @@ async def register_user(user: UserRegister): # FastAPI automatically parses the 
     if user.email in users_db:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exits :( whop-whop"
+            detail="User with this email already exits"
         )
     
     # Check if username is taken
@@ -130,7 +130,7 @@ async def register_user(user: UserRegister): # FastAPI automatically parses the 
         if existing_user["username"] == user.username:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                details="Username already taken :( choose another one"
+                detail="Username already taken"
             )
 
     # Validate role
@@ -139,7 +139,7 @@ async def register_user(user: UserRegister): # FastAPI automatically parses the 
     if user.role not in valid_roles:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            details=f"Invalid role. Must be one of: {', '.join(valid_roles)}"
+            detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}"
         )
     
     # Create user (In Sprint 2, we'll hash the password and save to database)
