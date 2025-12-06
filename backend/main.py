@@ -1,8 +1,10 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, Optional
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
+from sqlalchemy.orm import Session
+from database import get_db
 import os
 
 #Initialization of FastAPI applicaiton (Turning the Server on)
@@ -108,7 +110,7 @@ async def health_check():
 # response_model=UserResponse: Tells FastAPI what data structure to return (and validates it)
 # status_code=status.HTTP_201_CREATED: Returns HTTP 201 (standard for "successfully created something")
 @app.post("/api/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register_user(user: UserRegister): # FastAPI automatically parses the JSON request body into a UserRegister object
+async def register_user(user: UserRegister, db: Session = Depends(get_db)): # FastAPI automatically parses the JSON request body into a UserRegister object
     """
     Register a new user
 
@@ -117,51 +119,32 @@ async def register_user(user: UserRegister): # FastAPI automatically parses the 
     -**password**: User password (will be hashed in Sprint 2)
     -**role**: User role(student, instructor, tutor)
     """
-    # Check if user already exists, if email already a key, raise an error
-    if user.email in users_db:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exits"
-        )
+    # Check duplicate
+    exists = db.execute(
+        "SELECT email FROM user_id WHERE email=%s",
+        (user.email,)
+    ).fetchone()
     
-    # Check if username is taken
-    # Looks through all users to see if anyone has that username 
-    for existing_user in users_db.values():
-        if existing_user["username"] == user.username:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username already taken"
-            )
+    if exists:
+        raise HTTPException(status_code=400, detail="Email already registered")
 
-    # Validate role
-    # Makes sure they picked a valid role
-    valid_roles = ["student", "instructor", "tutor"]
-    if user.role not in valid_roles:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}"
-        )
-    
-    # Create user (In Sprint 2, we'll hash the password and save to database)
-    # Creates user dictionary and stores it with email as the key
-    user_data ={
+    # Insert new user
+    db.execute(
+        """
+        INSERT INTO user_id (email, password_hash, role)
+        VALUES (%s, %s, %s)
+        """,
+        (user.email, user.password, user.role)
+    )
+    db.commit()
+
+    return {
         "username": user.username,
         "email": user.email,
-        "password": user.password, # WARNING NO PLAIN TEXT PASSWORDS in production
         "role": user.role,
         "created_at": datetime.now().isoformat()
-
     }
 
-    users_db[user.email] = user_data
-
-    # Return user info (without password)
-    return UserResponse(
-        username=user_data["username"],
-        email=user_data["email"],
-        role=user_data["role"],
-        created_at=user_data["created_at"]
-    )
 
 # User Login endpoint
 # 1. Takes an email and Password from the request
@@ -171,7 +154,7 @@ async def register_user(user: UserRegister): # FastAPI automatically parses the 
 # Secure Note: Notice it says "Invalid email or password" for both cases. You never want to say "Email doesn't exist" because that helps hackers figure out which emails are registered!
 
 @app.post("/api/auth/login")
-async def login_user(credentials: UserLogin):
+async def login_user(credentials: UserLogin, db: Session = Depends(get_db)):
     """
     Login user
     
@@ -180,30 +163,24 @@ async def login_user(credentials: UserLogin):
     
     Returns user information on successful login
     """
-    # Check if user exists
-    if credentials.email not in users_db:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
-        )
-    
-    user = users_db[credentials.email]
-    
-    # Check password (In Sprint 2, we'll use proper password hashing)
-    if user["password"] != credentials.password:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
-        )
-    
-    # Return success with user info (In Sprint 2, we'll return a JWT token)
+    user = db.execute(
+        "SELECT * FROM user_id WHERE email = %s",
+        (credentials.email,)
+    ).fetchone()
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if user.password_hash != credentials.password:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
     return {
         "message": "Login successful",
         "user": {
-            "username": user["username"],
-            "email": user["email"],
-            "role": user["role"],
-            "created_at": user["created_at"]
+            "username": user.email.split('@')[0],
+            "email": user.email,
+            "role": user.role,
+            "created_at": user.created_at
         }
     }
 

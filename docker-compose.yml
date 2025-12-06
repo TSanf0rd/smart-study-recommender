@@ -1,7 +1,9 @@
 version: '3.8'
 
 services:
+  # ==============================
   # PostgreSQL Database with pgvector
+  # ==============================
   postgres:
     image: ankane/pgvector:latest
     container_name: study_recommender_db
@@ -18,8 +20,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - backend_net
 
+  # ==============================
   # FastAPI Backend
+  # ==============================
   backend:
     build:
       context: ./backend
@@ -38,15 +44,20 @@ services:
       API_HOST: 0.0.0.0
       API_PORT: 8000
       FRONTEND_URL: http://localhost:3000
+    networks:
+        - backend_net
+        - frontend_net
 
-  # React Frontend
+  # ==============================
+  # React Frontend (inside smart-study-ui)
+  # ==============================
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: study_recommender_frontend
     volumes:
-      - ./frontend:/app
+      - ./frontend/smart-study-ui:/app
       - /app/node_modules
     ports:
       - "3000:3000"
@@ -56,6 +67,11 @@ services:
       - CHOKIDAR_USEPOLLING=true
     stdin_open: true
     tty: true
+    networks:
+      - frontend_net
 
 volumes:
   postgres_data:
+networks:
+  backend_net:
+  frontend_net:
