@@ -2,7 +2,6 @@
 CQRS+EDA Implementation for Smart Study Resource Recommender
 Assignment 3 - Part 4
 """
-
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, status
 from pydantic import BaseModel, EmailStr
 from typing import Dict, List, Optional, Any
@@ -386,7 +385,7 @@ class UploadResourceCommandHandler:
     
     @staticmethod
     async def handle(command: UploadResourceCommand) -> CommandResult:
-        print(f"\n📝 Executing UploadResourceCommand: {command.title}")
+        print(f"\n Executing UploadResourceCommand: {command.title}")
         
         # 1. Validate user exists
         if not await UserRepository.user_exists(command.uploader_user_id):
@@ -449,7 +448,7 @@ class LogResourceViewCommandHandler:
     
     @staticmethod
     async def handle(command: LogResourceViewCommand) -> CommandResult:
-        print(f"\n📝 Executing LogResourceViewCommand for resource {command.resource_id}")
+        print(f"\n Executing LogResourceViewCommand for resource {command.resource_id}")
         
         # 1. Validate entities exist
         if not await UserRepository.user_exists(command.user_id):
@@ -809,7 +808,7 @@ if __name__ == "__main__":
     print("\n" + "="*70)
     print(" Starting CQRS+EDA Implementation - Assignment 3 Part 4")
     print("="*70)
-    print("\n📋 Implemented Use Cases:")
+    print("\n Implemented Use Cases:")
     print("  1. User Registration with Event Notification")
     print("  2. Resource Upload with Auto-Tagging")
     print("  3. View Resource with Activity Tracking")
