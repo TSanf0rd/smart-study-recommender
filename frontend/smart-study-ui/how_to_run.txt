@@ -1,0 +1,16 @@
+Step 1:
+Run the Command:
+docker-compose up --build
+
+This spins up the database, backend, and front-end.
+
+Step 2:
+Navigate to 
+
+
+Registered with:
+Name: test_123
+Email: test@test.com
+Password: test123
+Role: Student
+
