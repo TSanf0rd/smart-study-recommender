@@ -1,4 +1,4 @@
-version: '3.8'
+#version: '3.8'
 
 services:
   # ==============================
@@ -15,6 +15,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d study_recommender"]
       interval: 10s
@@ -31,9 +32,9 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: study_recommender_backend
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - ./backend:/app
+      - ./backend:/app/backend   # ← DO NOT override /app anymore
     ports:
       - "8000:8000"
     depends_on:

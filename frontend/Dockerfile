@@ -1,23 +1,3 @@
-<<<<<<< HEAD
-FROM node:18-alpine
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm install
-
-# Copy application code
-COPY . .
-
-# Expose port
-EXPOSE 3000
-
-# Start the application
-CMD ["npm", "start"]
-=======
 # ===========================================
 # FRONTEND DOCKERFILE (React + Node.js)
 # ===========================================
@@ -42,4 +22,3 @@ EXPOSE 3000
 
 # Start React app
 CMD ["npm", "start"]
->>>>>>> 4904945f7071cac7644f3f5d27ecec9cf8783f57

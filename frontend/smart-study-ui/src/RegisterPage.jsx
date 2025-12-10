@@ -4,6 +4,7 @@ import api from "./api";
 export default function RegisterPage() {
   const [form, setForm] = useState({
     username: "",
+    full_name: "",
     email: "",
     password: "",
     role: "student",
@@ -15,10 +16,19 @@ export default function RegisterPage() {
     e.preventDefault();
 
     try {
-      await api.post("/auth/register", form);
+      const response = await api.post("/api/auth/register", form);
+
+
       setMessage("User registered successfully!");
+      console.log("Backend response:", response.data);
     } catch (error) {
-      setMessage(error.response?.data?.detail || "Registration failed");
+      console.log(error);
+
+      setMessage(
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        "Registration failed"
+      );
     }
   }
 
@@ -31,13 +41,22 @@ export default function RegisterPage() {
           <input
             style={styles.input}
             placeholder="Username"
+            value={form.username}
             onChange={(e) => setForm({ ...form, username: e.target.value })}
+          />
+
+          <input
+            style={styles.input}
+            placeholder="Full Name"
+            value={form.full_name}
+            onChange={(e) => setForm({ ...form, full_name: e.target.value })}
           />
 
           <input
             style={styles.input}
             type="email"
             placeholder="Email"
+            value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
 
@@ -45,11 +64,13 @@ export default function RegisterPage() {
             style={styles.input}
             type="password"
             placeholder="Password"
+            value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
 
           <select
             style={styles.input}
+            value={form.role}
             onChange={(e) => setForm({ ...form, role: e.target.value })}
           >
             <option value="student">Student</option>
@@ -96,5 +117,6 @@ const styles = {
     border: "none",
     borderRadius: "6px",
     cursor: "pointer",
+    fontWeight: "bold",
   },
 };

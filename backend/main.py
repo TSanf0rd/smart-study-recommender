@@ -3,8 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, Optional
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
+from sqlalchemy import text
 from sqlalchemy.orm import Session
-from database import get_db
+from backend.database import get_db
 import os
 
 #Initialization of FastAPI applicaiton (Turning the Server on)
@@ -24,10 +25,15 @@ app = FastAPI(
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True, # Can send cookies/auth tokens
-    allow_origins=[frontend_url, "http://localhost:3000"], # Which websites are allowed to talk to your API
-    allow_methods=["*"], # Which HTTP methods (GET, POST, PUT, DELETE, etc.) are allowed [*] means all methods
-    allow_headers=["*"], # Which custom headers are allowed
+    allow_credentials=True,
+    allow_origins=[
+        frontend_url,
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://0.0.0.0:3000",
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 #Temportary Data Storage (In-Memory)
@@ -121,8 +127,8 @@ async def register_user(user: UserRegister, db: Session = Depends(get_db)): # Fa
     """
     # Check duplicate
     exists = db.execute(
-        "SELECT email FROM user_id WHERE email=%s",
-        (user.email,)
+        text("SELECT email FROM user_id WHERE email = :email"),
+        {"email": user.email}
     ).fetchone()
     
     if exists:
@@ -130,11 +136,15 @@ async def register_user(user: UserRegister, db: Session = Depends(get_db)): # Fa
 
     # Insert new user
     db.execute(
-        """
-        INSERT INTO user_id (email, password_hash, role)
-        VALUES (%s, %s, %s)
-        """,
-        (user.email, user.password, user.role)
+        text("""
+            INSERT INTO user_id (email, password_hash, role)
+            VALUES (:email, :password_hash, :role)
+        """),
+        {
+            "email": user.email,
+            "password_hash": user.password,
+            "role": user.role
+        }
     )
     db.commit()
 
@@ -164,8 +174,8 @@ async def login_user(credentials: UserLogin, db: Session = Depends(get_db)):
     Returns user information on successful login
     """
     user = db.execute(
-        "SELECT * FROM user_id WHERE email = %s",
-        (credentials.email,)
+        text("SELECT * FROM user_id WHERE email = :email"),
+        {"email": credentials.email}
     ).fetchone()
 
     if not user:
