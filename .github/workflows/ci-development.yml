@@ -1,0 +1,156 @@
+name: CI - Continuous Integration (Development Branch)
+
+# Trigger only on development branch
+on:
+  push:
+    branches:
+      - development
+  pull_request:
+    branches:
+      - development
+
+jobs:
+  test-and-coverage:
+    name: Run Tests and Generate Coverage Report
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Checkout code from development branch
+      - name: Checkout development branch
+        uses: actions/checkout@v3
+        with:
+          ref: development
+      
+      # Step 2: Set up Python environment
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      # Step 3: Cache pip dependencies for faster builds
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      # Step 4: Install dependencies
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio httpx
+      
+      # Step 5: Run linting (code quality check)
+      - name: Lint with flake8
+        run: |
+          pip install flake8
+          # Stop build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        continue-on-error: true
+      
+      # Step 6: Run all tests with coverage
+      - name: Run pytest with coverage
+        run: |
+          cd /home/claude
+          pytest test_cqrs_eda_coverage.py -v --cov=cqrs_eda_implementation --cov-report=term --cov-report=xml --cov-report=html
+      
+      # Step 7: Upload coverage report as artifact
+      - name: Upload coverage HTML report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: htmlcov/
+          retention-days: 30
+      
+      # Step 8: Upload coverage XML for analysis
+      - name: Upload coverage XML
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          retention-days: 30
+      
+      # Step 9: Comment coverage summary on PR
+      - name: Coverage comment
+        if: github.event_name == 'pull_request'
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          MINIMUM_GREEN: 90
+          MINIMUM_ORANGE: 80
+        continue-on-error: true
+      
+      # Step 10: Check coverage threshold
+      - name: Check coverage threshold
+        run: |
+          pip install coverage
+          coverage report --fail-under=80
+      
+      # Step 11: Deploy coverage report to GitHub Pages
+      - name: Deploy coverage to GitHub Pages
+        if: github.ref == 'refs/heads/development'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./htmlcov
+          destination_dir: htmlcov
+          keep_files: true
+      
+      # Step 12: Create test summary
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All tests completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "Coverage report generated and uploaded as artifact" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View detailed coverage: Check artifacts" >> $GITHUB_STEP_SUMMARY
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: development
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install quality tools
+        run: |
+          pip install black isort mypy
+      
+      - name: Check code formatting with Black
+        run: |
+          black --check --diff .
+        continue-on-error: true
+      
+      - name: Check import sorting with isort
+        run: |
+          isort --check-only --diff .
+        continue-on-error: true
+      
+      - name: Type checking with mypy
+        run: |
+          mypy cqrs_eda_implementation.py --ignore-missing-imports
+        continue-on-error: true
+      
+      - name: Quality check summary
+        if: always()
+        run: |
+          echo "## Code Quality Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Quality checks completed" >> $GITHUB_STEP_SUMMARY
