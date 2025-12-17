@@ -56,8 +56,7 @@ jobs:
       # Step 6: Run all tests with coverage
       - name: Run pytest with coverage
         run: |
-          cd /home/claude
-          pytest test_cqrs_eda_coverage.py -v --cov=cqrs_eda_implementation --cov-report=term --cov-report=xml --cov-report=html
+          pytest tests/test_cqrs_eda_coverage.py -v --cov=cqrs_eda_implementation --cov-report=term --cov-report=xml --cov-report=html
       
       # Step 7: Upload coverage report as artifact
       - name: Upload coverage HTML report
