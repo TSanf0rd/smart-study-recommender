@@ -1,9 +1,7 @@
 -- Enable pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- ============================================================================
 -- CORE TABLES WITH VECTOR EMBEDDINGS
--- ============================================================================
 
 -- Users table
 CREATE TABLE user_id (
@@ -48,9 +46,7 @@ CREATE TABLE users_preferences (
 CREATE INDEX idx_preference_embedding ON users_preferences 
 USING ivfflat (preference_embedding vector_cosine_ops) WITH (lists = 100);
 
--- ============================================================================
 -- RESOURCE TABLES
--- ============================================================================
 
 CREATE TABLE resources_metadata (
     resource_id SERIAL PRIMARY KEY,
@@ -122,9 +118,7 @@ CREATE TABLE resources_stats (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================================================
 -- TAGS
--- ============================================================================
 
 CREATE TABLE tags_master (
     tag_id SERIAL PRIMARY KEY,
@@ -166,9 +160,7 @@ CREATE TABLE mapping_user_interests (
 
 CREATE INDEX idx_user_interests ON mapping_user_interests(user_id);
 
--- ============================================================================
 -- ACTIVITY TABLES
--- ============================================================================
 
 CREATE TABLE activites_views (
     view_id SERIAL PRIMARY KEY,
@@ -218,9 +210,7 @@ CREATE INDEX idx_ratings_resource ON activites_ratings(resource_id);
 CREATE INDEX idx_review_sentiment ON activites_ratings 
 USING ivfflat (review_sentiment_embedding vector_cosine_ops) WITH (lists = 50);
 
--- ============================================================================
 -- RECOMMENDATION TABLES
--- ============================================================================
 
 CREATE TABLE recommendations_generated (
     recommendation_id SERIAL PRIMARY KEY,
@@ -255,9 +245,7 @@ CREATE TABLE recommendations_feedback (
 
 CREATE INDEX idx_feedback_user ON recommendations_feedback(user_id);
 
--- ============================================================================
 -- OTHER HELPER TABLES
--- ============================================================================
 
 CREATE TABLE search_queries (
     query_id SERIAL PRIMARY KEY,
