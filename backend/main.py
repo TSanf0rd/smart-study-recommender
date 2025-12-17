@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from backend.Routes.resources import router as resources_router
 from typing import Dict, Optional
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
@@ -187,6 +188,7 @@ async def login_user(credentials: UserLogin, db: Session = Depends(get_db)):
     return {
         "message": "Login successful",
         "user": {
+            "user_id": str(user.user_id),
             "username": user.email.split('@')[0],
             "email": user.email,
             "role": user.role,
@@ -207,6 +209,10 @@ async def get_users():
             "created_at": user["created_at"]
         })
     return {"users": users_list, "total": len(users_list)}
+
+# Router for a Resource Endpoints (View, Rate, List and Upload)
+app.include_router(resources_router, prefix="/api/cqrs")
+
 
 # Run the application
 if __name__ == "__main__":

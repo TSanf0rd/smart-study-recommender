@@ -6,6 +6,7 @@ import {
   UserCircle,
   Settings,
   LogOut,
+  LibraryBig
 } from "lucide-react"
 
 export default function DashboardLayout() {
@@ -18,6 +19,12 @@ export default function DashboardLayout() {
           icon={<LayoutDashboard size={20} />}
           text="Dashboard"
           onClick={() => navigate("/dashboard")}
+        />
+
+        <SidebarItem
+          icon={<LibraryBig />}
+          text="Resources"
+          onClick={() => navigate("/resources")}
         />
 
         <SidebarItem
@@ -47,6 +54,8 @@ export default function DashboardLayout() {
             navigate("/")
           }}
         />
+
+
       </Sidebar>
 
       {/* Page content swaps here */}

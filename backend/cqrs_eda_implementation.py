@@ -10,6 +10,8 @@ from enum import Enum
 import uuid
 import asyncio
 from collections import defaultdict
+from sqlalchemy import text
+from backend.database import SessionLocal
 
 # ============================================================================
 # MODELS AND DATA STRUCTURES
@@ -158,7 +160,7 @@ class ResourceRepository:
     
     @staticmethod
     async def create_resource_metadata(resource_id: str, title: str, description: str,
-                                      resource_type: str, difficulty: str, uploader_id: str):
+                                      resource_type: str, difficulty: str, file_size: int,uploader_id: str):
         """Create resource metadata record"""
         resources_metadata_db[resource_id] = {
             "resource_id": resource_id,
@@ -166,7 +168,7 @@ class ResourceRepository:
             "description": description,
             "resource_type": resource_type,
             "difficulty_level": difficulty,
-            "file_size_mb": 2.5,  # Mock value
+            "file_size_mb": file_size,
             "upload_timestamp": datetime.now().isoformat(),
             "uploader_user_id": uploader_id
         }
@@ -226,6 +228,27 @@ class ResourceRepository:
                 stats["last_accessed"] = datetime.now().isoformat()
                 stats["updated_at"] = datetime.now().isoformat()
                 return stats
+    
+    @staticmethod
+    async def get_resource_by_id(resource_id: str) -> Optional[dict]:
+        """Get full resource details"""
+        metadata = resources_metadata_db.get(resource_id)
+        if not metadata:
+            return None
+
+        content = None
+        for c in resources_content_db.values():
+            if c["resource_id"] == resource_id:
+                content = c
+                break
+
+        stats = await ResourceRepository.get_resource_stats(resource_id)
+
+        return {
+            **metadata,
+            "content": content,
+            "stats": stats
+        }
 
 class ActivityRepository:
     """Repository for activity tracking"""
@@ -378,37 +401,62 @@ class UploadResourceCommand(BaseModel):
     resource_type: str
     difficulty_level: str
     uploader_user_id: str
-    file_name: str
+    filename: str
+    file_size: int
+    content_type: str
 
 class UploadResourceCommandHandler:
     """Handler for resource upload command"""
-    
+
     @staticmethod
     async def handle(command: UploadResourceCommand) -> CommandResult:
         print(f"\n Executing UploadResourceCommand: {command.title}")
-        
-        # 1. Validate user exists
-        if not await UserRepository.user_exists(command.uploader_user_id):
-            raise HTTPException(status_code=404, detail="User not found")
-        
+
+        # 1. Validate user exists (SYNC DB access)
+        db = SessionLocal()
+        try:
+            result = db.execute(
+                text("SELECT 1 FROM user_id WHERE user_id = :uid"),
+                {"uid": int(command.uploader_user_id)}
+            )
+
+            if result.fetchone() is None:
+                raise HTTPException(status_code=404, detail="User not found")
+
+        finally:
+            db.close()
+
         # 2. Generate resource_id
         resource_id = str(uuid.uuid4())
-        
-        # 3. Create resource records (low-cohesion: 3 separate tables)
+
+        # 3. Create resource metadata
         await ResourceRepository.create_resource_metadata(
-            resource_id, command.title, command.description,
-            command.resource_type, command.difficulty_level, command.uploader_user_id
+            resource_id=resource_id,
+            title=command.title,
+            description=command.description,
+            resource_type=command.resource_type,
+            difficulty=command.difficulty_level,
+            file_size=command.file_size,
+            uploader_id=command.uploader_user_id
         )
-        
-        file_url = f"https://cdn.example.com/{command.file_name}"
-        await ResourceRepository.create_resource_content(resource_id, f"/uploads/{command.file_name}", file_url)
+
+        # 4. Persist file metadata (NOT the file itself)
+        storage_path = f"/uploads/{resource_id}_{command.filename}"
+        file_url = f"https://cdn.example.com/{resource_id}_{command.filename}"
+
+        await ResourceRepository.create_resource_content(
+            resource_id=resource_id,
+            file_path=storage_path,
+            file_url=file_url,
+        )
+
+        # 5. Initialize stats
         await ResourceRepository.create_resource_stats(resource_id)
-        
-        # 4. Auto-generate tags (simplified)
-        auto_tags = ["mathematics", "study-guide", "beginner"]
-        print(f"  → Auto-generated tags: {auto_tags}")
-        
-        # 5. Publish event
+
+        # 6. Auto-generate tags (placeholder)
+        auto_tags = ["mathematics", "study-guide", "intermediate"]
+
+        # 7. Publish domain event
         event = Event(
             event_id=str(uuid.uuid4()),
             event_type="ResourceUploadedEvent",
@@ -417,12 +465,14 @@ class UploadResourceCommandHandler:
                 "resource_id": resource_id,
                 "title": command.title,
                 "uploader_user_id": command.uploader_user_id,
+                "file_size": command.file_size,
+                "content_type": command.content_type,
                 "auto_tags": auto_tags
             }
         )
         await event_bus.publish(event)
-        
-        # 6. Return result
+
+        # 8. Return result
         return CommandResult(
             success=True,
             data={
@@ -434,6 +484,7 @@ class UploadResourceCommandHandler:
             events_published=["ResourceUploadedEvent"],
             message="Resource uploaded successfully"
         )
+
 
 class LogResourceViewCommand(BaseModel):
     """Command to log a resource view"""
@@ -683,8 +734,15 @@ async def upload_resource(
     resource_type: str = Form(...),
     difficulty_level: str = Form(...),
     uploader_user_id: str = Form(...),
-    file_name: str = Form(...)
-):
+    file: UploadFile = File(...),
+    ):
+
+    file_size = 0
+    while chunk := await file.read(1024 * 1024):
+        file_size += len(chunk)
+    
+    await file.seek(0)
+
     """
     Use Case 2: Upload resource with auto-tagging
     
@@ -697,7 +755,7 @@ async def upload_resource(
         resource_type=resource_type,
         difficulty_level=difficulty_level,
         uploader_user_id=uploader_user_id,
-        file_name=file_name
+        file=file
     )
     return await UploadResourceCommandHandler.handle(command)
 
@@ -798,6 +856,32 @@ async def get_event_log():
             for e in event_bus.event_log[-20:]  # Last 20 events
         ]
     }
+
+@app.get("/api/cqrs/resources/by-uploader/{user_id}")
+async def get_resources_by_uploader(user_id: str):
+    db = SessionLocal()
+    try:
+        result = db.execute(
+            text("""
+                SELECT resource_id, title, description, resource_type,
+                       difficulty_level, uploader_user_id
+                FROM resources_metadata
+                WHERE uploader_user_id = :uid
+            """),
+            {"uid": user_id}
+        )
+
+        resources = [dict(row._mapping) for row in result]
+
+        return {
+            "success": True,
+            "data": resources
+        }
+
+    finally:
+        db.close()
+
+
 
 # ============================================================================
 # RUN APPLICATION

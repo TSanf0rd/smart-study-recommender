@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import api from "./api";
+import api from "../src/api/client";
 
 export default function RegisterPage() {
   const [form, setForm] = useState({

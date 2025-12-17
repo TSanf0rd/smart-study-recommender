@@ -5,6 +5,7 @@ import LoginPage from "./LoginPage";
 import RegisterPage from "./RegisterPage";
 import Dashboard from "./Dashboard";
 import Videos from "./Videos";
+import Resources from "./Resources";
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
       <Route element={<DashboardLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/videos" element={<Videos />} />
+        <Route path="/resources" element={<Resources />} />
       </Route>
     </Routes>
   )

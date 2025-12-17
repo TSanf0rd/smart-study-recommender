@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "./api";
+import api from "../src/api/client";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     try {
-      const response = await api.post("api/auth/login", {
+      const response = await api.post("/api/auth/login", {
         email,
         password
       });
